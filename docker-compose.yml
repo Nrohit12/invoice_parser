@@ -29,19 +29,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  migrate:
-    build: .
-    container_name: fastapi_migrate
-    volumes:
-      - .:/app
-    env_file:
-      - .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: python migrate.py
-
   api:
     build: .
     container_name: fastapi_api
@@ -49,15 +36,18 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+      - pdf_uploads:/tmp/pdf_uploads
+      - pdf_storage:/data/storage
     env_file:
       - .env
+    environment:
+      - UPLOAD_DIR=/tmp/pdf_uploads
+      - STORAGE_DIR=/data/storage
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   celery_worker:
@@ -65,16 +55,19 @@ services:
     container_name: fastapi_celery_worker
     volumes:
       - .:/app
+      - pdf_uploads:/tmp/pdf_uploads
+      - pdf_storage:/data/storage
     env_file:
       - .env
+    environment:
+      - UPLOAD_DIR=/tmp/pdf_uploads
+      - STORAGE_DIR=/data/storage
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    command: celery -A app.celery_app worker --loglevel=info
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
 
   celery_flower:
     build: .
@@ -93,3 +86,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  pdf_uploads:
+  pdf_storage:

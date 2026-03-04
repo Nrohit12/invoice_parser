@@ -4,14 +4,18 @@ import redis
 from sqlalchemy import text
 from app.config import settings
 from app.celery_app import celery_app
-from app.tasks.tasks import long_running_task, add_numbers, send_notification
 from app.db.database import engine as db_engine
+from app.routers import extraction
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    debug=settings.debug
+    debug=settings.debug,
+    description="PDF Invoice Extraction API with OCR and UOM Normalization"
 )
+
+# Include extraction router
+app.include_router(extraction.router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -91,78 +95,4 @@ async def health_check():
         "database": db_status,
         "redis": redis_status,
         "celery": celery_status
-    }
-
-
-@app.post("/tasks/long-running")
-async def create_long_running_task(task_request: TaskRequest):
-    task = long_running_task.delay(task_request.duration)
-    return {
-        "task_id": task.id,
-        "status": "started",
-        "message": f"Long running task started with duration {task_request.duration} seconds"
-    }
-
-
-@app.post("/tasks/add")
-async def create_add_task(add_request: AddRequest):
-    task = add_numbers.delay(add_request.x, add_request.y)
-    return {
-        "task_id": task.id,
-        "status": "started",
-        "message": f"Addition task started: {add_request.x} + {add_request.y}"
-    }
-
-
-@app.post("/tasks/notification")
-async def create_notification_task(notification_request: NotificationRequest):
-    task = send_notification.delay(
-        notification_request.message,
-        notification_request.recipient
-    )
-    return {
-        "task_id": task.id,
-        "status": "started",
-        "message": f"Notification task started for {notification_request.recipient}"
-    }
-
-
-@app.get("/tasks/{task_id}")
-async def get_task_status(task_id: str):
-    task = celery_app.AsyncResult(task_id)
-    
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    response = {
-        "task_id": task_id,
-        "status": task.status,
-        "result": task.result
-    }
-    
-    if task.status == "PROGRESS":
-        response["progress"] = task.info
-    
-    return response
-
-
-@app.delete("/tasks/{task_id}")
-async def cancel_task(task_id: str):
-    celery_app.control.revoke(task_id, terminate=True)
-    return {
-        "task_id": task_id,
-        "status": "cancelled",
-        "message": "Task cancellation requested"
-    }
-
-
-@app.get("/tasks")
-async def list_active_tasks():
-    inspect = celery_app.control.inspect()
-    active_tasks = inspect.active()
-    scheduled_tasks = inspect.scheduled()
-    
-    return {
-        "active_tasks": active_tasks,
-        "scheduled_tasks": scheduled_tasks
     }

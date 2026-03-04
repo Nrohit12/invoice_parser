@@ -5,7 +5,7 @@ celery_app = Celery(
     "worker",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks.tasks"]
+    include=["app.tasks.tasks", "app.tasks.pdf_extraction_tasks"]
 )
 
 celery_app.conf.update(

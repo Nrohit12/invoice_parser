@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # Application Settings
     app_name: str = os.environ.get("APP_NAME", "FastAPI Celery App")
     app_version: str = os.environ.get("APP_VERSION", "1.0.0")
+
+
+    #Open ai api key
+    OPENAI_API_KEY: str = os.environ.get("OPENAI_API_KEY", "")
     
     class Config:
         env_file = ".env"

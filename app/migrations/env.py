@@ -8,11 +8,11 @@ from sqlalchemy import pool
 from alembic import context
 
 # Add the app directory to the path so we can import our models
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from app.config import settings
 from app.db.database import Base
 from app.db.task import TaskResult  # Import all models here
+from app.db.models import ExtractionJob, ExtractedLineItem, LookupAuditLog, FileWatcherState  # Import new models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
