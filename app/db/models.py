@@ -4,8 +4,18 @@ Stores extraction jobs, line items, and lookup audit trails
 """
 
 from sqlalchemy import (
-    Column, Integer, String, Text, DateTime, Float, Boolean,
-    ForeignKey, JSON, Enum as SQLEnum, Index
+    Column,
+    Integer,
+    BigInteger,
+    String,
+    Text,
+    DateTime,
+    Float,
+    Boolean,
+    ForeignKey,
+    JSON,
+    Enum as SQLEnum,
+    Index,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -112,7 +122,7 @@ class ExtractedLineItem(Base):
     
     # UOM fields
     original_uom = Column(String(20), nullable=True)
-    detected_pack_quantity = Column(Integer, nullable=True)
+    detected_pack_quantity = Column(BigInteger, nullable=True)
     canonical_base_uom = Column(String(10), default="EA")
     
     # Pricing
@@ -171,7 +181,7 @@ class LookupAuditLog(Base):
     # Results
     success = Column(Boolean, default=False)
     resolved_uom = Column(String(20), nullable=True)
-    resolved_pack_quantity = Column(Integer, nullable=True)
+    resolved_pack_quantity = Column(BigInteger, nullable=True)
     confidence = Column(Float, nullable=True)
     reasoning = Column(Text, nullable=True)
     

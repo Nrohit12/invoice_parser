@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PDF Invoice Extraction UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --danger: #f97373;
+      --danger-soft: rgba(248, 113, 113, 0.15);
+      --ok: #4ade80;
+      --ok-soft: rgba(74, 222, 128, 0.12);
+      --warn: #60a5fa;
+      --warn-soft: rgba(96, 165, 250, 0.12);
+      --border: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --chip: #111827;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 7px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      background: radial-gradient(circle at top left, #1f2937 0, #020617 45%, #020617 100%);
+      color: var(--text);
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1200px;
+      display: grid;
+      grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 880px) {
+      body { padding: 16px 12px; }
+      .shell {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .panel {
+      background: radial-gradient(circle at top left, #111827 0, #020617 45%, #020617 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow:
+        0 18px 60px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      padding: 18px 18px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: -120px;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.12), transparent 55%);
+      mix-blend-mode: screen;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .panel-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tagline {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .badge {
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(56, 189, 248, 0.55);
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), rgba(15, 23, 42, 0.9));
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #e0f2fe;
+    }
+
+    .upload-card {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: 1px dashed rgba(148, 163, 184, 0.55);
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.95));
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.08s ease;
+    }
+
+    .upload-card.dragover {
+      border-style: solid;
+      border-color: rgba(56, 189, 248, 0.9);
+      background: radial-gradient(circle at top, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.96));
+      transform: translateY(-1px);
+    }
+
+    .upload-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .upload-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .upload-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 0, rgba(56, 189, 248, 0.7), rgba(59, 130, 246, 0.3));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0b1220;
+      font-size: 18px;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9);
+    }
+
+    .upload-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .upload-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 7px 13px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.06s ease, opacity 0.08s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #6366f1);
+      color: #0b1220;
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 12px 30px rgba(37, 99, 235, 0.45);
+    }
+
+    .btn-primary:hover {
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 16px 40px rgba(37, 99, 235, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 8px 22px rgba(37, 99, 235, 0.45);
+    }
+
+    .btn-secondary {
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--muted);
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 6px 11px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    .btn[disabled] {
+      opacity: 0.55;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .files-pill {
+      margin-top: 2px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .file-chip {
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .file-chip span {
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .hint span strong {
+      color: #e5e7eb;
+    }
+
+    .hint-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 0, #4ade80, #22c55e);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+    }
+
+    .options-row {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .toggle input {
+      appearance: none;
+      width: 28px;
+      height: 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: #020617;
+      position: relative;
+      outline: none;
+      cursor: pointer;
+      transition: background 0.16s ease, border-color 0.16s ease;
+    }
+
+    .toggle input::before {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: #9ca3af;
+      transition: transform 0.16s ease, background 0.16s ease;
+    }
+
+    .toggle input:checked {
+      background: radial-gradient(circle at 30% 0, #38bdf8, #6366f1);
+      border-color: transparent;
+    }
+
+    .toggle input:checked::before {
+      transform: translateX(10px);
+      background: #020617;
+    }
+
+    .status-bar {
+      margin-top: 12px;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .status-bar strong {
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 0, #38bdf8, #6366f1);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.12); opacity: 1; }
+    }
+
+    .jobs-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .jobs-scroll {
+      margin-top: 14px;
+      max-height: 80vh;
+      overflow: auto;
+      padding-right: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(148, 163, 184, 0.8) transparent;
+    }
+
+    .jobs-scroll::-webkit-scrollbar {
+      width: 7px;
+    }
+
+    .jobs-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .jobs-scroll::-webkit-scrollbar-thumb {
+      background: rgba(30, 64, 175, 0.9);
+      border-radius: 999px;
+    }
+
+    .job-card {
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+      padding: 10px 11px 9px;
+      margin-bottom: 10px;
+    }
+
+    .job-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .job-header-clickable {
+      cursor: pointer;
+    }
+
+    .job-toggle-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.95);
+      margin-left: 6px;
+      flex-shrink: 0;
+      transition: transform 0.14s ease, background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+    }
+
+    .job-toggle-icon.open {
+      transform: rotate(90deg);
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.8);
+      color: #e0f2fe;
+    }
+
+    .job-details {
+      margin-top: 6px;
+    }
+
+    .job-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .job-title-main {
+      font-weight: 500;
+    }
+
+    .job-meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #9ca3af;
+    }
+
+    .pill.completed {
+      border-color: rgba(34, 197, 94, 0.85);
+      background: var(--ok-soft);
+      color: #bbf7d0;
+    }
+
+    .pill.completed .pill-dot {
+      background: #4ade80;
+    }
+
+    .pill.processing {
+      border-color: rgba(59, 130, 246, 0.9);
+      background: var(--warn-soft);
+      color: #dbeafe;
+    }
+
+    .pill.processing .pill-dot {
+      background: #60a5fa;
+    }
+
+    .pill.failed {
+      border-color: rgba(248, 113, 113, 0.9);
+      background: var(--danger-soft);
+      color: #fecaca;
+    }
+
+    .pill.failed .pill-dot {
+      background: #f97373;
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .summary-chip {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 999px;
+      padding: 3px 7px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+    }
+
+    .summary-chip strong {
+      color: #e5e7eb;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+      font-size: 11px;
+      table-layout: fixed;
+    }
+
+    thead {
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    th, td {
+      padding: 4px 5px;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+      vertical-align: top;
+    }
+
+    th {
+      text-align: left;
+      font-weight: 500;
+      color: #9ca3af;
+      font-size: 10px;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .row-escalated {
+      background: radial-gradient(circle at left, rgba(248, 113, 113, 0.16), rgba(24, 24, 27, 0.96));
+    }
+
+    .row-ok {
+      background: radial-gradient(circle at left, rgba(74, 222, 128, 0.13), rgba(15, 23, 42, 0.96));
+    }
+
+    .row-medium {
+      background: radial-gradient(circle at left, rgba(59, 130, 246, 0.12), rgba(15, 23, 42, 0.96));
+    }
+
+    .badge-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+    }
+
+    .badge-escalated {
+      background: var(--danger-soft);
+      color: #fecaca;
+      border: 1px solid rgba(248, 113, 113, 0.85);
+    }
+
+    .badge-ok {
+      background: var(--ok-soft);
+      color: #bbf7d0;
+      border: 1px solid rgba(74, 222, 128, 0.85);
+    }
+
+    .badge-medium {
+      background: var(--warn-soft);
+      color: #dbeafe;
+      border: 1px solid rgba(59, 130, 246, 0.85);
+    }
+
+    .confidence {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .error-text {
+      color: #fecaca;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="panel">
+      <div class="panel-inner">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <h1>
+              <span>Invoice Extraction</span>
+              <span class="badge">Agentic OCR Pipeline</span>
+            </h1>
+            <div class="tagline">
+              Drop one or many PDFs. We’ll call the batch API, wait for jobs to complete, and visualize every extracted line item with escalation signals.
+            </div>
+          </div>
+        </div>
+
+        <label id="dropzone" class="upload-card">
+          <div class="upload-header">
+            <div class="upload-left">
+              <div class="upload-icon">⭳</div>
+              <div>
+                <div class="upload-title">Drop PDFs here or browse</div>
+                <div class="upload-subtitle">We’ll upload using the batch endpoint and poll for results.</div>
+              </div>
+            </div>
+            <button type="button" id="browseButton" class="btn btn-primary">
+              <span>Choose files</span>
+            </button>
+          </div>
+          <input id="fileInput" class="file-input" type="file" accept="application/pdf" multiple />
+          <div id="selectedFiles" class="files-pill">
+            <span>No files selected yet.</span>
+          </div>
+          <div class="hint">
+            <span><strong>Tip:</strong> multi-select or drop multiple PDFs to run a batch extraction.</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <span class="hint-dot"></span>
+              <span>Backend: FastAPI + Celery + Redis</span>
+            </div>
+          </div>
+        </label>
+
+        <div class="options-row">
+          <label class="toggle">
+            <input id="agenticToggle" type="checkbox" checked />
+            <span>Enable agentic lookup</span>
+          </label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input id="supplierInput" type="text" placeholder="Supplier name (optional)" style="background:#020617;border-radius:999px;border:1px solid rgba(55,65,81,0.9);padding:6px 9px;font-size:12px;color:var(--text);min-width:0;max-width:180px;" />
+            <button id="uploadButton" class="btn btn-primary">
+              <span id="uploadButtonLabel">Start extraction</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="status-bar" id="statusBar">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="status-dot"></div>
+            <div>
+              <div><strong>Status:</strong> Idle – select PDFs and start a batch.</div>
+            </div>
+          </div>
+          <div id="activeJobsLabel">No active jobs</div>
+        </div>
+        <div id="errorArea" class="error-text" style="display:none;"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-inner jobs-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div>
+            <h1>Extraction Results</h1>
+            <div class="tagline">We’ll stream in newly completed jobs as soon as they’re ready.</div>
+          </div>
+          <button id="clearButton" class="btn btn-secondary" type="button">Clear view</button>
+        </div>
+
+        <div id="jobsContainer" class="jobs-scroll"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    (function () {
+      const fileInput = document.getElementById("fileInput");
+      const dropzone = document.getElementById("dropzone");
+      const browseButton = document.getElementById("browseButton");
+      const uploadButton = document.getElementById("uploadButton");
+      const uploadButtonLabel = document.getElementById("uploadButtonLabel");
+      const agenticToggle = document.getElementById("agenticToggle");
+      const supplierInput = document.getElementById("supplierInput");
+      const selectedFiles = document.getElementById("selectedFiles");
+      const statusBar = document.getElementById("statusBar");
+      const activeJobsLabel = document.getElementById("activeJobsLabel");
+      const jobsContainer = document.getElementById("jobsContainer");
+      const clearButton = document.getElementById("clearButton");
+      const errorArea = document.getElementById("errorArea");
+
+      let currentFiles = [];
+      let jobs = {}; // jobId -> { status, response }
+      let pollingTimer = null;
+
+      function setError(message) {
+        if (!message) {
+          errorArea.style.display = "none";
+          errorArea.textContent = "";
+          return;
+        }
+        errorArea.style.display = "block";
+        errorArea.textContent = message;
+      }
+
+      function updateSelectedFilesView() {
+        selectedFiles.innerHTML = "";
+        if (!currentFiles.length) {
+          const span = document.createElement("span");
+          span.textContent = "No files selected yet.";
+          selectedFiles.appendChild(span);
+          return;
+        }
+        currentFiles.forEach((file) => {
+          const chip = document.createElement("div");
+          chip.className = "file-chip";
+          const name = document.createElement("span");
+          name.textContent = file.name;
+          const size = document.createElement("small");
+          size.className = "muted";
+          size.textContent = ` ${(file.size / 1024).toFixed(1)} KB`;
+          chip.appendChild(name);
+          chip.appendChild(size);
+          selectedFiles.appendChild(chip);
+        });
+      }
+
+      function setUploadingState(isUploading) {
+        uploadButton.disabled = isUploading;
+        browseButton.disabled = isUploading;
+        fileInput.disabled = isUploading;
+        uploadButtonLabel.textContent = isUploading ? "Uploading…" : "Start extraction";
+      }
+
+      function updateStatusBar() {
+        const total = Object.keys(jobs).length;
+        const active = Object.values(jobs).filter((j) =>
+          j.status === "pending" || j.status === "processing"
+        ).length;
+        const completed = Object.values(jobs).filter((j) => j.status === "completed").length;
+        const failed = Object.values(jobs).filter((j) => j.status === "failed").length;
+
+        let statusText;
+        if (!total) {
+          statusText = "Idle – select PDFs and start a batch.";
+        } else if (active) {
+          statusText = `Running extraction for ${active} job(s)…`;
+        } else {
+          statusText = "All tracked jobs have finished.";
+        }
+
+        statusBar.querySelector("strong").nextSibling.textContent = " " + statusText;
+
+        if (!total) {
+          activeJobsLabel.textContent = "No active jobs";
+        } else {
+          activeJobsLabel.textContent = `${total} job(s): ${completed} completed, ${failed} failed`;
+        }
+      }
+
+      function confidenceClass(score) {
+        if (score === null || score === undefined) return "badge-medium";
+        if (score >= 0.7) return "badge-ok";
+        if (score >= 0.5) return "badge-medium";
+        return "badge-escalated";
+      }
+
+      function rowClass(item) {
+        if (item.escalation_flag) return "row-escalated";
+        const score = item.confidence_score ?? 0;
+        if (score >= 0.7) return "row-ok";
+        if (score >= 0.5) return "row-medium";
+        return "row-escalated";
+      }
+
+      function renderJobs() {
+        jobsContainer.innerHTML = "";
+        const ids = Object.keys(jobs);
+        if (!ids.length) {
+          const empty = document.createElement("div");
+          empty.className = "tagline";
+          empty.textContent = "No jobs yet. Upload PDFs to see extracted line items here.";
+          jobsContainer.appendChild(empty);
+          return;
+        }
+
+        // Render most recent first
+        ids.sort().reverse();
+
+        ids.forEach((jobId) => {
+          const job = jobs[jobId];
+          const card = document.createElement("div");
+          card.className = "job-card";
+
+          const header = document.createElement("div");
+          header.className = "job-header job-header-clickable";
+
+          const title = document.createElement("div");
+          title.className = "job-title";
+          const titleMain = document.createElement("div");
+          titleMain.className = "job-title-main";
+          titleMain.textContent = job.response?.file_name || jobId;
+          const meta = document.createElement("div");
+          meta.className = "job-meta";
+          const liCount = job.response?.total_line_items ?? 0;
+          const pages = job.response?.total_pages ?? "–";
+          const esc = job.response?.escalation_count ?? 0;
+          meta.textContent = `Job ${jobId} • Pages: ${pages} • Line items: ${liCount} • Escalations: ${esc}`;
+          title.appendChild(titleMain);
+          title.appendChild(meta);
+
+          const headerLeft = document.createElement("div");
+          headerLeft.style.display = "flex";
+          headerLeft.style.alignItems = "center";
+          headerLeft.style.gap = "6px";
+
+          const toggleIcon = document.createElement("div");
+          toggleIcon.className = "job-toggle-icon";
+          toggleIcon.textContent = "›";
+
+          headerLeft.appendChild(toggleIcon);
+          headerLeft.appendChild(title);
+
+          const pill = document.createElement("div");
+          pill.className = "pill " + (job.status || "");
+          const dot = document.createElement("div");
+          dot.className = "pill-dot";
+          const label = document.createElement("span");
+          label.textContent = job.status || "unknown";
+          pill.appendChild(dot);
+          pill.appendChild(label);
+
+          header.appendChild(headerLeft);
+          header.appendChild(pill);
+          card.appendChild(header);
+
+          if (job.status === "failed" && job.response?.error_message) {
+            const error = document.createElement("div");
+            error.className = "error-text";
+            error.textContent = "Error: " + job.response.error_message;
+            card.appendChild(error);
+          }
+
+          const details = document.createElement("div");
+          details.className = "job-details";
+          // default expanded for completed, collapsed otherwise
+          const isCompleted = job.status === "completed" && job.response;
+          details.style.display = isCompleted ? "block" : "none";
+          if (isCompleted) {
+            toggleIcon.classList.add("open");
+          }
+
+          if (isCompleted) {
+            const summaryRow = document.createElement("div");
+            summaryRow.className = "summary-row";
+            const summary = job.response.summary;
+
+            if (summary) {
+              const chip1 = document.createElement("span");
+              chip1.className = "summary-chip";
+              chip1.innerHTML = `<strong>${summary.items_with_uom}</strong> with UOM`;
+              const chip2 = document.createElement("span");
+              chip2.className = "summary-chip";
+              chip2.innerHTML = `<strong>${summary.items_with_mpn}</strong> with MPN`;
+              const chip3 = document.createElement("span");
+              chip3.className = "summary-chip";
+              chip3.innerHTML = `<strong>${summary.items_requiring_escalation}</strong> escalations`;
+              const chip4 = document.createElement("span");
+              chip4.className = "summary-chip";
+              chip4.innerHTML = `<strong>${(summary.avg_confidence ?? 0).toFixed(2)}</strong> avg confidence`;
+
+              summaryRow.appendChild(chip1);
+              summaryRow.appendChild(chip2);
+              summaryRow.appendChild(chip3);
+              summaryRow.appendChild(chip4);
+            }
+
+            details.appendChild(summaryRow);
+
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            thead.innerHTML = `
+              <tr>
+                <th style="width:18%;">Description / Supplier</th>
+                <th style="width:16%;">UOM / Pack</th>
+                <th style="width:16%;">Qty / Pricing</th>
+                <th style="width:16%;">Codes</th>
+                <th style="width:20%;">Raw line</th>
+                <th style="width:14%;">Escalation / Confidence</th>
+              </tr>
+            `;
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+            (job.response.line_items || []).forEach((item) => {
+              const tr = document.createElement("tr");
+              tr.className = rowClass(item);
+
+              const tdDesc = document.createElement("td");
+              tdDesc.innerHTML = `
+                <div>${item.item_description || "<span class='muted'>–</span>"}</div>
+                <div class="muted" style="margin-top:2px;">${item.supplier_name || ""}</div>
+              `;
+
+              const tdUom = document.createElement("td");
+              const original = item.original_uom || "–";
+              const packInfo = item.pack_info
+                ? `${item.pack_info.quantity} / ${item.pack_info.unit}`
+                : "–";
+              tdUom.innerHTML = `
+                <div>Original: <strong>${original}</strong></div>
+                <div class="muted" style="margin-top:2px;">Pack: ${packInfo}</div>
+                <div class="muted" style="margin-top:2px;">Base UOM: ${item.canonical_base_uom}</div>
+              `;
+
+              const tdQty = document.createElement("td");
+              tdQty.innerHTML = `
+                <div>Qty: <strong>${item.quantity ?? "–"}</strong></div>
+                <div class="muted" style="margin-top:2px;">Unit: ${item.unit_price ?? "–"}</div>
+                <div class="muted" style="margin-top:2px;">Total: ${item.total_amount ?? "–"}</div>
+              `;
+
+              const tdCodes = document.createElement("td");
+              tdCodes.innerHTML = `
+                <div>MPN: ${item.manufacturer_part_number || "<span class='muted'>–</span>"}</div>
+                <div class="muted" style="margin-top:2px;">HSN: ${item.hsn_code || "–"}</div>
+                <div class="muted" style="margin-top:2px;">SAC: ${item.sac_code || "–"}</div>
+              `;
+
+              const tdRaw = document.createElement("td");
+              tdRaw.innerHTML = `
+                <div class="muted" style="max-height:3.2em;overflow:hidden;text-overflow:ellipsis;">${item.raw_line || "–"}</div>
+              `;
+
+              const tdEsc = document.createElement("td");
+              const badge = document.createElement("div");
+              const cClass = confidenceClass(item.confidence_score);
+              badge.className = "badge-field " + cClass;
+              const conf = (item.confidence_score ?? 0).toFixed(2);
+              badge.innerHTML = `
+                <span class="confidence">${conf}</span>
+              `;
+              tdEsc.appendChild(badge);
+
+              if (item.escalation_flag || (item.escalation_reasons && item.escalation_reasons.length)) {
+                const reasons = document.createElement("div");
+                reasons.className = "muted";
+                reasons.style.marginTop = "3px";
+                const list = (item.escalation_reasons || []).join(", ") || "requires review";
+                reasons.textContent = "Escalated: " + list;
+                tdEsc.appendChild(reasons);
+              } else {
+                const ok = document.createElement("div");
+                ok.className = "muted";
+                ok.style.marginTop = "3px";
+                ok.textContent = "Auto-accepted";
+                tdEsc.appendChild(ok);
+              }
+
+              tr.appendChild(tdDesc);
+              tr.appendChild(tdUom);
+              tr.appendChild(tdQty);
+              tr.appendChild(tdCodes);
+              tr.appendChild(tdRaw);
+              tr.appendChild(tdEsc);
+              tbody.appendChild(tr);
+            });
+
+            table.appendChild(tbody);
+            details.appendChild(table);
+          }
+
+          card.appendChild(details);
+
+          header.addEventListener("click", () => {
+            const isOpen = details.style.display !== "none";
+            if (isOpen) {
+              details.style.display = "none";
+              toggleIcon.classList.remove("open");
+            } else {
+              details.style.display = "block";
+              toggleIcon.classList.add("open");
+            }
+          });
+
+          jobsContainer.appendChild(card);
+        });
+      }
+
+      async function pollJobsOnce() {
+        const entries = Object.entries(jobs).filter(([_, j]) =>
+          j.status === "pending" || j.status === "processing"
+        );
+        if (!entries.length) {
+          if (pollingTimer) {
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+          }
+          updateStatusBar();
+          return;
+        }
+
+        await Promise.all(
+          entries.map(async ([jobId, job]) => {
+            try {
+              const res = await fetch(`/api/v1/extract/jobs/${encodeURIComponent(jobId)}?include_line_items=true`);
+              if (!res.ok) return;
+              const data = await res.json();
+              job.status = data.status;
+              job.response = data;
+            } catch (e) {
+              // ignore individual polling error; keep trying
+            }
+          })
+        );
+
+        renderJobs();
+        updateStatusBar();
+      }
+
+      function ensurePolling() {
+        if (pollingTimer) return;
+        pollingTimer = setInterval(pollJobsOnce, 5000);
+      }
+
+      async function startUpload() {
+        setError("");
+        if (!currentFiles.length) {
+          setError("Please choose at least one PDF.");
+          return;
+        }
+        const form = new FormData();
+        currentFiles.forEach((file) => {
+          form.append("files", file, file.name);
+        });
+
+        const enableAgentic = agenticToggle.checked;
+        const supplier = supplierInput.value.trim();
+        const q = new URLSearchParams();
+        q.set("enable_agentic_lookup", String(enableAgentic));
+        if (supplier) q.set("supplier_name", supplier);
+
+        setUploadingState(true);
+
+        try {
+          const res = await fetch(`/api/v1/extract/bulk-upload?${q.toString()}`, {
+            method: "POST",
+            body: form
+          });
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || `Upload failed with status ${res.status}`);
+          }
+          const data = await res.json();
+          (data.job_ids || []).forEach((jobId) => {
+            jobs[jobId] = {
+              status: "processing",
+              response: {
+                job_id: jobId,
+                file_name: null
+              }
+            };
+          });
+          renderJobs();
+          updateStatusBar();
+          ensurePolling();
+          statusBar.querySelector("strong").nextSibling.textContent =
+            " Upload successful – waiting for jobs to complete.";
+        } catch (err) {
+          console.error(err);
+          setError(err.message || "Upload failed.");
+        } finally {
+          setUploadingState(false);
+        }
+      }
+
+      // Event handlers
+      browseButton.addEventListener("click", () => fileInput.click());
+
+      fileInput.addEventListener("change", (e) => {
+        currentFiles = Array.from(e.target.files || []);
+        updateSelectedFilesView();
+        setError("");
+      });
+
+      ["dragenter", "dragover"].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.add("dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzone.classList.remove("dragover");
+        });
+      });
+
+      dropzone.addEventListener("drop", (e) => {
+        const dt = e.dataTransfer;
+        if (!dt) return;
+        const files = Array.from(dt.files || []).filter((f) =>
+          f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")
+        );
+        if (!files.length) {
+          setError("Only PDF files are supported.");
+          return;
+        }
+        currentFiles = files;
+        updateSelectedFilesView();
+        fileInput.value = "";
+        setError("");
+      });
+
+      uploadButton.addEventListener("click", () => {
+        startUpload();
+      });
+
+      clearButton.addEventListener("click", () => {
+        jobs = {};
+        renderJobs();
+        updateStatusBar();
+      });
+
+      renderJobs();
+      updateStatusBar();
+    })();
+  </script>
+</body>
+</html>
+

@@ -250,7 +250,7 @@ async def get_job_status(
     # Include line items if requested
     if include_line_items and job.status == DBJobStatus.COMPLETED.value:
         line_items = db.query(ExtractedLineItem).filter(
-            ExtractedLineItem.job_id == job.id
+            ExtractedLineItem.job_id == job.job_id
         ).all()
         
         response.line_items = [

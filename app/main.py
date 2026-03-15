@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import redis
 from sqlalchemy import text
@@ -63,6 +64,14 @@ async def root():
         "version": settings.app_version,
         "status": "running"
     }
+
+
+@app.get("/ui")
+async def upload_ui():
+    """
+    Serve the HTML UI for uploading PDFs and viewing extraction results.
+    """
+    return FileResponse("templates/index.html")
 
 
 @app.get("/health")

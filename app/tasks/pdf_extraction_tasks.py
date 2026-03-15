@@ -412,9 +412,10 @@ def process_bulk_pdfs(self, job_ids: List[str], pdf_paths: List[str], options: D
                     "batch_job_id": f"batch_{int(time.time())}"
                 }
             )
-            
-            # Process individual PDF
-            result = process_pdf_extraction.apply(args=[job_id, pdf_path, options]).get()
+
+            # Process individual PDF synchronously within this task
+            # Avoid creating a nested Celery subtask and calling .get() inside a task
+            result = process_pdf_extraction.run(job_id, pdf_path, options)
             results.append(result)
             
             logger.info(f"Completed {i + 1}/{total_files}: {job_id}")
